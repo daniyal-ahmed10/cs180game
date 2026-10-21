@@ -12,19 +12,19 @@
 ######
 
 import cv2
-import mediapipe as mp
+from mediapipe import Image, ImageFormat
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
 
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-
+# Initialize hand tracker
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
     min_detection_confidence=0.7,
     min_tracking_confidence=0.7
 )
+
 
 def classify_hand_gesture(landmarks):
     index_open = landmarks[8].y < landmarks[6].y
