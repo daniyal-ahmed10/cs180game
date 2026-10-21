@@ -10,6 +10,13 @@
 #   2. Ensure you have a webcam connected to your computer for hand tracking
 #   3. To run this script, a virtual environment may be required to avoid conflicts with other packages
 ######
+#   SOURCES:
+#   1. https://www.geeksforgeeks.org/python/python-opencv-cv2-puttext-method/
+#   2. https://stackoverflow.com/questions/56108183/python-opencv-cv2-drawing-rectangle-with-text
+#   3. https://www.datacamp.com/tutorial/if-name-equals-main-python
+#   4. https://medium.com/@ahmedakmal687/mastering-mediapipe-and-opencv-a-step-by-step-guide-to-drawing-hand-connections-7e2aa3c2378e
+######
+
 
 
 import cv2
@@ -35,6 +42,20 @@ HAND_CONNECTIONS = [
 ]
 
 
+def classify_hand_gesture(landmarks):
+    index_open = landmarks[8].y < landmarks[6].y
+    middle_open = landmarks[12].y < landmarks[10].y
+    ring_open = landmarks[16].y < landmarks[14].y
+    pinky_open = landmarks[20].y < landmarks[18].y
+
+    if not any([index_open, middle_open, ring_open, pinky_open]):
+        return "CLOSED FIST"
+    elif index_open and not any([middle_open, ring_open, pinky_open]):
+        return "POINTING FINGER"
+    elif all([index_open, middle_open, ring_open, pinky_open]):
+        return "OPEN PALM"
+
+    return "UNKNOWN GESTURE"
 
 
 
@@ -76,12 +97,40 @@ def main():
             for hand_landmarks in detection_result.hand_landmarks:
                 draw_hand_skeleton(frame, hand_landmarks, w, h)
 
+                gesture_text = classify_hand_gesture(hand_landmarks)
+
                 min_y = min([lm.y for lm in hand_landmarks])
                 wrist_x = hand_landmarks[0].x
 
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.6
+                thickness = 2
+                (text_w, text_h), baseline = cv2.getTextSize(gesture_text, font, font_scale, thickness)
 
+                text_x = int(wrist_x * w) - (text_w // 2)
+                text_y = int(min_y * h) - 20
 
- 
+                text_x = max(10, min(text_x, w - text_w - 10))
+                text_y = max(text_h + 10, text_y)
+
+                cv2.rectangle(
+                    frame,
+                    (text_x - 6, text_y - text_h - 6),
+                    (text_x + text_w + 6, text_y + baseline + 4),
+                    (0, 0, 0),
+                    -1
+                )
+                cv2.putText(
+                    frame,
+                    gesture_text,
+                    (text_x, text_y),
+                    font,
+                    font_scale,
+                    (0, 255, 0),
+                    thickness,
+                    cv2.LINE_AA
+                )
+
         cv2.imshow("handtracktest.py", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
