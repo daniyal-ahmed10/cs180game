@@ -53,3 +53,39 @@ def classify_hands(all_hand_landmarks) -> str | None:
         return "korean_heart"
 
     return NORMAL_GESTURES.get((idx, mid, ring, pinky))
+
+
+# Sends gestures to GODOT
+class HandInputSource(InputSource):
+    def __init__(
+        self,
+        model_path: str = "hand_landmarker.task",
+        camera_index: int = 0,
+        udp_host: str = "127.0.0.1",
+        udp_port: int = 4242,
+        show_preview: bool = True,
+    ):
+        super().__init__("hand_tracker")
+        self.model_path = model_path
+        self.camera_index = camera_index
+        self.udp_addr = (udp_host, udp_port)
+        self.show_preview = show_preview
+
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._active_gesture: str | None = None
+
+    # Camera On
+    def _start_capture(self):
+        self._stop_event.clear()
+        self._active_gesture = None
+        self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+        self._thread.start()
+
+    #Camera Off
+    def _stop_capture(self):
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
