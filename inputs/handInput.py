@@ -89,3 +89,53 @@ class HandInputSource(InputSource):
         if self._thread is not None:
             self._thread.join(timeout=2.0)
             self._thread = None
+
+    def _send_to_godot(self, gesture: str):
+        self._sock.sendto(gesture.encode("utf-8"), self.udp_addr)
+
+    def _capture_loop(self):
+        base_options = python.BaseOptions(model_asset_path=self.model_path)
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.IMAGE,
+            num_hands=2,
+        )
+        detector = vision.HandLandmarker.create_from_options(options)
+        cap = cv2.VideoCapture(self.camera_index)
+
+        try:
+            while not self._stop_event.is_set() and cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    continue
+
+                frame = cv2.flip(frame, 1)
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                mp_image = Image(image_format=ImageFormat.SRGB, data=rgb)
+                result = detector.detect(mp_image)
+
+                detected = classify_hands(result.hand_landmarks)
+
+                if detected != self._active_gesture:
+                    now = self.now()
+                    if self._active_gesture is not None:
+                        self._emit(self._active_gesture, InputAction.RELEASED, now)
+                    if detected is not None:
+                        self._emit(detected, InputAction.PRESSED, now)
+                        self._send_to_godot(detected)
+                    self._active_gesture = detected
+
+                if self.show_preview:
+                    label = self._active_gesture or "none"
+                    cv2.putText(
+                        frame, f"Gesture: {label}", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2
+                    )
+                    cv2.imshow("Ritmo Hand Input (Press Q to quit)", frame)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        self._stop_event.set()
+                        break
+        finally:
+            cap.release()
+            if self.show_preview:
+                cv2.destroyAllWindows()
