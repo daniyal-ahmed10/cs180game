@@ -76,6 +76,9 @@ class HandInputSource(InputSource):
         self._stop_event = threading.Event()
         self._active_gesture: str | None = None
 
+        self._frame_lock = threading.Lock()
+        self._latest_frame = None
+
     # Camera On
     def _start_capture(self):
         self._stop_event.clear()
@@ -89,9 +92,24 @@ class HandInputSource(InputSource):
         if self._thread is not None:
             self._thread.join(timeout=2.0)
             self._thread = None
+        if self.show_preview:
+            cv2.destroyAllWindows()
 
     def _send_to_godot(self, gesture: str):
         self._sock.sendto(gesture.encode("utf-8"), self.udp_addr)
+
+
+    def render_preview(self) -> bool:
+        if not self.show_preview:
+            return True
+        with self._frame_lock:
+            frame = None if self._latest_frame is None else self._latest_frame.copy()
+        if frame is not None:
+            cv2.imshow("Ritmo Hand Input (Press Q to quit)", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            self._stop_event.set()
+            return False
+        return True
 
     def _capture_loop(self):
         base_options = python.BaseOptions(model_asset_path=self.model_path)
@@ -131,10 +149,8 @@ class HandInputSource(InputSource):
                         frame, f"Gesture: {label}", (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2
                     )
-                    cv2.imshow("Ritmo Hand Input (Press Q to quit)", frame)
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        self._stop_event.set()
-                        break
+                    with self._frame_lock:
+                        self._latest_frame = frame
         finally:
             cap.release()
             if self.show_preview:
@@ -143,11 +159,13 @@ class HandInputSource(InputSource):
 if __name__ == "__main__":
     source = HandInputSource(show_preview=True)
     source.start()
-    print("Streaming gestures to Godot on 127.0.0.1:4242...")
+    print("Godot Connection Working.")
     try:
         while source.is_active() and not source._stop_event.is_set():
             for event in source.poll():
                 print(f"[{event.timestamp:.3f}s] {event.input_id} -> {event.action.value}")
+            if not source.render_preview():
+                break
     except KeyboardInterrupt:
         pass
     finally:
