@@ -139,3 +139,16 @@ class HandInputSource(InputSource):
             cap.release()
             if self.show_preview:
                 cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    source = HandInputSource(show_preview=True)
+    source.start()
+    print("Streaming gestures to Godot on 127.0.0.1:4242...")
+    try:
+        while source.is_active() and not source._stop_event.is_set():
+            for event in source.poll():
+                print(f"[{event.timestamp:.3f}s] {event.input_id} -> {event.action.value}")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        source.stop()
