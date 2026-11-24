@@ -3,9 +3,11 @@
 
 import json
 import hashlib
+import re
+import secrets
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -22,6 +24,10 @@ def mock_hash(password: str) -> str:
     """Mock hash: swap this out for bcrypt/argon2 if the project grows."""
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
+# token -> username (in memory, cleared when the server restarts)
+sessions: dict[str, str] = {}
+
+# --- account json load and save
 
 def load_accounts() -> dict:
     if not ACCOUNTS_FILE.exists():
@@ -38,11 +44,11 @@ def save_accounts(accounts: dict) -> None:
     with open(ACCOUNTS_FILE, "w") as file:
         json.dump(accounts, file, indent=2)
 
-
 @app.get("/")
 def root():
     return {"status": "ok"}
 
+# --- account signup and login
 
 @app.post("/signup", status_code=201)
 def sign_up(creds: Credentials):
@@ -62,4 +68,16 @@ def log_in(creds: Credentials):
     if account is None or account["password_hash"] != mock_hash(creds.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    return {"message": f"Welcome back, {creds.username}"}
+    token = secrets.token_hex(32)
+    sessions[token] = creds.username
+    return {"token": token}
+
+@app.post("/logout")
+def log_out(authorization: str = Header(default="")):
+    _, _, token = authorization.partition(" ")
+    sessions.pop(token, None)
+    return {"message": "Logged out"}
+
+@app.get("/getTokens")
+def getTokens():
+    return sessions
