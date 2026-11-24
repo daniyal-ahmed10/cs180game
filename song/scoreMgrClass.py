@@ -3,21 +3,19 @@ class ScoreMgr:
     combo: int = 0      # current streak of consecutive notes
     max_combo: int = 0  # shown at the end
     accuracy: float = 1 # from 0 to 1
-    notecount: int      # needed to calculate accuracy
+    notecount: int = 0  # needed to calculate accuracy
 
     # accuracy: window (in ms) 
     WINDOWS = {
         "perfect": 20.0,
         "great": 70.0,
-        "okay": 110.0,
-        "miss": 150.0
+        "okay": 110.0
     }
     # accuracy: score
     SCORES = {
         "perfect": 100,
         "great" : 50,
-        "okay": 25,
-        "miss": 0
+        "okay": 25
     }
 
     # addscore interface
@@ -28,9 +26,20 @@ class ScoreMgr:
         
         # timingErrorMs: how many ms away a keypress is from the actual note
         # note_type: "tap", "hold", etc.
-        # holdPct: how much of a hold note is pressed
+        # holdPct: how much of a hold note is pressed from 0 to 1
         #           holdPct defaults to 0 for tap notes
 
+        # input validation for note_type
+        if not(note_type == "tap" or note_type == "hold"):
+            raise ValueError(
+                f"unknown note_type {note_type!r}, expected one of {'tap', 'hold'}\ncheck function call for typos"
+            )
+        # input validation for holdPct
+        if holdPct < 0 or holdPct > 1:
+            raise ValueError(
+                f"holdPct {holdPct!r} is out of range, acceptable range is [0, 1]"
+            )
+        
         # hit scoring
         err = abs(timingErrorMs)
         hit = True
@@ -41,10 +50,10 @@ class ScoreMgr:
                 self.score += self.SCORES["great"]
             elif err <= self.WINDOWS["okay"]:
                 self.score += self.SCORES["okay"]
-            elif err <= self.WINDOWS["miss"]:
+            else:
                 hit = False
-        if note_type == "hold":
-            # hold note scores are scaled to how long 
+        elif note_type == "hold":
+            # hold note scores are scaled to how long theyre pressed
             holdScore = 0
             if err <= self.WINDOWS["perfect"]:
                 holdScore += self.SCORES["perfect"]
@@ -52,10 +61,11 @@ class ScoreMgr:
                 holdScore += self.SCORES["great"]
             elif err <= self.WINDOWS["okay"]:
                 holdScore += self.SCORES["okay"]
-            elif err <= self.WINDOWS["miss"]:
+            else:
                 hit = False
             holdScore = holdScore * holdPct
             self.score += holdScore
+
 
         # combo logic
         if hit == False:
@@ -67,6 +77,8 @@ class ScoreMgr:
 
         # accuracy logic, based on max score
         maxScore = self.notecount * self.SCORES["perfect"]
+        if maxScore <= 0:  # input validation for 0 notes
+            maxScore = 1  # prevents divide by 0
         self.accuracy = self.score / maxScore
 
         return
