@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b545ntw0xkejy"]
+
+[ext_resource type="Script" path="res://tests/test_keyboard_input.gd" id="1"]
+
+[node name="TestKeyboardInput" type="Node"]
+script = ExtResource("1")
