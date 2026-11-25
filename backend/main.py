@@ -139,10 +139,14 @@ def log_in(creds: Credentials):
     return {"token": token}
 
 @app.post("/logout")
-def log_out(authorization: str = Header(default="")):
-    _, _, token = authorization.partition(" ")
-    sessions.pop(token, None)
+def log_out(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)):
+    if credentials is not None:
+        sessions.pop(credentials.credentials, None)
     return {"message": "Logged out"}
+
+@app.get("/getTokens")
+def getTokens():
+    return sessions
 
 # --- leaderboard
 # json format: {song name : [username : score]}
