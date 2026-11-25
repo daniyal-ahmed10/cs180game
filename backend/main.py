@@ -144,10 +144,6 @@ def log_out(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_sc
         sessions.pop(credentials.credentials, None)
     return {"message": "Logged out"}
 
-@app.get("/getTokens")
-def getTokens():
-    return sessions
-
 # --- leaderboard
 # json format: {song name : [username : score]}
 # scores are sorted highest first, lower score entries get pushed out
