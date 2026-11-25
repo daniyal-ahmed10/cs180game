@@ -144,10 +144,6 @@ def log_out(authorization: str = Header(default="")):
     sessions.pop(token, None)
     return {"message": "Logged out"}
 
-@app.get("/getTokens")
-def getTokens():
-    return sessions
-
 # --- leaderboard
 # json format: {song name : [username : score]}
 # scores are sorted highest first, lower score entries get pushed out
