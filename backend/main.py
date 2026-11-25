@@ -102,7 +102,20 @@ def root():
     return {"status": "ok"}
 
 # --- account signup and login
-
+# json format: {username : {password_hash : [hash]}}
+"""
+ex:
+{
+    a : {
+        password_hash : asdfghjkl
+    }
+    b : {
+        password_hash : qwertyuiop
+    }
+    ...
+    ...
+}
+"""
 @app.post("/signup", status_code=201)
 def sign_up(creds: Credentials):
     accounts = load_accounts()
@@ -158,7 +171,7 @@ ex:
 
 """
 
-TOP_N = 5
+TOP_N = 5 # change if we want a different amt to display
 
 @app.post("/submitscore")
 def submitscore(sub: ScoreSubmission, username: str = Depends(get_current_user)):
@@ -197,4 +210,4 @@ def get_leaderboard(song: str):
     song_scores = load_leaderboard().get(song)
     if not song_scores:
         raise HTTPException(status_code = 404, detail = "No scores yet")
-    return {song:song_scores[:limit]}
+    return {song:song_scores[:TOP_N]}
