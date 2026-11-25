@@ -103,8 +103,9 @@ func active_input_type() -> String:
 # ---- timing ----
 
 # Sets the Conductor used as the song clock. Inputs are discarded until this
-# is called, since there's no song yet to time them against -- this is the
-# Conductor-based replacement for the old "set_song_start(t)" setter.
+# is called, and also until the Conductor's song has started (see
+# Conductor.is_running()), since there's no song yet to time them against --
+# this is the Conductor-based replacement for the old "set_song_start(t)" setter.
 func set_conductor(conductor: Conductor) -> void:
 	_conductor = conductor
 
@@ -115,7 +116,7 @@ func clear_conductor() -> void:
 
 
 func song_has_started() -> bool:
-	return _conductor != null
+	return _conductor != null and _conductor.is_running()
 
 
 # Sets the extra delay to subtract for one source type.
@@ -129,7 +130,7 @@ func set_source_latency(input_type: String, seconds: float) -> void:
 # already song time (see InputSource), so correction is just calibration and
 # source latency. Re-emits input_routed(input_id, song_time) for HitJudge.
 func _on_input_received(key, time: float) -> void:
-	if _conductor == null:
+	if _conductor == null or not _conductor.is_running():
 		return  # song hasn't started; nothing to time this input against
 
 	var latency: float = source_latency.get(_active_type, 0.0)  # unknown types: no correction
