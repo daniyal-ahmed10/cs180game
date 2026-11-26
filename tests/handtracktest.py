@@ -54,6 +54,8 @@ def classify_hand_gesture(landmarks):
         return "POINTING FINGER"
     elif all([index_open, middle_open, ring_open, pinky_open]):
         return "OPEN PALM"
+    elif pinky_open and not any([index_open, middle_open, ring_open]):
+        return "PINKY UP"
 
     return "UNKNOWN GESTURE"
 
@@ -71,6 +73,7 @@ def draw_hand_skeleton(frame, landmarks, w, h):
 
 
 def main():
+
     cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
