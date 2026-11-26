@@ -29,8 +29,10 @@ The `.godot/` cache folder is created automatically and is git-ignored. Don't co
 | `project.godot` | Godot project settings, including the Input Map (`lane_0`–`lane_3` = D, F, J, K) |
 | `inputs/input_source.gd` | `InputSource`: base class for all input. Has `start()`, `stop()` and the `input_received(key, time)` signal |
 | `inputs/keyboard_input.gd` | `KeyboardInput`: keyboard lanes for Medium/Hard levels. Emits `input_received(lane, song_time)` once per press (held keys don't repeat) and keeps a log of the last 100 inputs (`debug_mode` prints each one) |
+| `inputs/input_router.gd` | `InputRouter`: owns the active `InputSource` for the level and re-emits its hits as `input_routed(input_id, song_time)`, corrected for `calibration_offset` and per-source `source_latency`. Inputs are discarded until `set_conductor()` is called |
 | `song/conductor.gd` | `Conductor`: the game's **only** clock. `song_time()` returns seconds into the song, corrected for audio latency. With no song loaded it counts from `start_song()`, which is handy for tests |
 | `tests/test_keyboard_input.gd` / `.tscn` | Manual test scene for `KeyboardInput` |
+| `tests/test_input_router.gd` / `.tscn` | Manual test scene for `InputRouter`: wires it to a `KeyboardInput` and prints each routed input |
 | `inputs/*.py`, `song/*.py`, `tests/*.py` | Older Python prototypes and the hand-tracking test (see below) |
 
 ### How the pieces connect
@@ -49,7 +51,7 @@ KeyboardInput / MotionInput  --input_received(lane, time)-->  InputRouter  -->  
 
 ### Still to do
 
-- [ ] `InputRouter`: holds one `InputSource` and forwards `input_received` to `HitJudge`
+- [x] `InputRouter`: holds one `InputSource`, corrects for calibration/latency, and re-emits `input_routed` for `HitJudge`
 - [ ] `HitJudge`: compares input times with note times from the chart
 - [ ] Port `Chart` / `Note` from Python to GDScript
 - [ ] `MotionInput`: the Python hand tracker can't run inside Godot, so it will run as a separate process and send results to Godot (e.g. over a local UDP socket). A GDScript `MotionInput extends InputSource` receives them and emits `input_received`, so the rest of the game works the same for both play styles

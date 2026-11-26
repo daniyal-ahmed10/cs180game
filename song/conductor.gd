@@ -31,6 +31,11 @@ func stop_song() -> void:
 		stop()
 
 
+# Returns true while the song (or silent clock) is running.
+func is_running() -> bool:
+	return _is_running
+
+
 # Returns the current song time in seconds. Never goes backwards while running.
 func song_time() -> float:
 	if not _is_running:
